@@ -1,11 +1,13 @@
+import { RequestWithUser } from "../middleware/auth.middleware";
 import { getUsers as getUsersService } from "../services/userService"
 import { getUserById as getUserByIdService } from "../services/userService";
-import { createUser as createUserService } from "../services/userService";
+import { getUserMe as getUserMeService } from "../services/userService";
+
 import { Request, Response } from "express"
 
 // ОТРИМАТИ СПИСОК ВСІХ КОРИСТУВАЧІВ
-export function getUsers(req: Request, res: Response) {
-    const users = getUsersService();
+export async function getUsers(req: Request, res: Response) {
+    const users = await getUsersService();
 
     res.json({
         users: users
@@ -13,11 +15,11 @@ export function getUsers(req: Request, res: Response) {
 }
 
 // ОТРИМАТИ КОРИСТУВАЧА ЗА ID
-export function getUserById(req: Request, res: Response) {
+export async function getUserById(req: Request, res: Response) {
     const id = String(req.params.id);
-    const user = getUserByIdService(id);
+    const user = await getUserByIdService(id);
 
-    if(user) {
+    if (user) {
         return res.json({
             data: user
         });
@@ -29,25 +31,19 @@ export function getUserById(req: Request, res: Response) {
     }
 }
 
-// СТВОРИТИ КОРИСТУВАЧА
-export function createUser(req: Request, res: Response){
-    const { name, email } = req.body;
-    console.log(name, email);
+// ОТРИМАТИ КОРИСТУВАЧА (З JWT)
+export async function getUserByJWT(req: Request, res: Response) {
+    const user = (req as RequestWithUser).user;
+    const userInfo = await getUserMeService(user.id);
 
-    if(!name || !email){
-        return res.status(400).json({
-            error: "Name and email are required"
+    if (userInfo) {
+        return res.json({
+            data: userInfo
         });
     }
-
-    const userData = {
-        name: name,
-        email: email
+    else {
+        return res.status(404).json({
+            error: "User not found"
+        })
     }
-
-    const newUser = createUserService(userData);
-
-    res.status(201).json({
-        user: newUser
-    });
 }

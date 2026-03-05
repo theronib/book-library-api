@@ -1,26 +1,59 @@
-import { CreateUserDto } from "../schemas/user.schema";
-import { USERS } from "../storage/users";
-import { User } from "../types/user";
-import { randomUUID } from "crypto";
+import prisma from "../lib/prisma";
+
 
 // ОТРИМАТИ СПИСОК КОРИСТУВАЧІВ
-export function getUsers() {
-    return USERS;
+export async function getUsers() {
+    const users = await prisma.user.findMany();
+
+    const userSafeInfo = users.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+    }))
+
+    return userSafeInfo
 }
 
 // ОТРИМАТИ КОРИСТУВАЧА ЗА ID
-export function getUserById(id: string) {
-    return USERS.find(user => user.id === id);
-}
+export async function getUserById(id: string) {
+    const user = await prisma.user.findUnique({
+        where: {
+            id: id
+        }
+    });
 
-// СТВОРИТИ КОРИСТУВАЧА
-export function createUser(user: CreateUserDto) {
-    const newUser: User = {
-        id: randomUUID(),
-        name: user.name,
-        email: user.email
+    if (!user) {
+        return null;
     }
 
-    USERS.push(newUser);
-    return newUser;
+    const userSafeInfo = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+    }
+
+    return userSafeInfo;
+}
+
+// ПОТОЧНИЙ КОРИСТУВАЧ (З JWT)
+export async function getUserMe(id: string) {
+    const user = await prisma.user.findUnique({
+        where: {
+            id: id
+        }
+    })
+
+    if (!user) {
+        return null;
+    }
+
+    const userSafeInfo = {
+        name: user.name,
+        email: user.email,
+        role: user.role
+    }
+
+    return userSafeInfo;
 }

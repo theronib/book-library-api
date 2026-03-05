@@ -6,8 +6,8 @@ import { deleteBook as deleteBookService } from "../services/bookService";
 import { Request, Response } from "express";
 
 // ОТРИМАТИ СПИСОК ВСІХ КНИГ
-export function getBooks(req: Request, res: Response) {
-    const books = getBooksService();
+export async function getBooks(req: Request, res: Response) {
+    const books = await getBooksService();
 
     res.json({
         books: books
@@ -15,9 +15,9 @@ export function getBooks(req: Request, res: Response) {
 }
 
 // ОТРИМАТИ КНИГУ ЗА ID
-export function getBookById(req: Request, res: Response) {
+export async function getBookById(req: Request, res: Response) {
     const id = String(req.params.id);
-    const book = getBookByIdService(id);
+    const book = await getBookByIdService(id);
 
     if (book) {
         return res.json({
@@ -32,58 +32,81 @@ export function getBookById(req: Request, res: Response) {
 }
 
 // СТВОРИТИ КНИГУ
-export function createBook(req: Request, res: Response) {
-    const { title, author, year, isbn, available } = req.body;
-    console.log(title, author);
+export async function createBook(req: Request, res: Response) {
+    try {
+        const { title, author, year, isbn, available } = req.body;
 
-    if (!title || !author) {
-        return res.status(400).json({
-            error: "Title and author are required"
+        const bookData = {
+            title: title,
+            author: author,
+            year: year,
+            isbn: isbn,
+            available: available
+        };
+
+        const newBook = await createBookService(bookData);
+
+        res.status(201).json({
+            book: newBook
         });
     }
+    catch {
+        return res.status(500).json({
+            error: "Internal server error"
+        })
+    }
 
-    const bookData = {
-        title: title,
-        author: author,
-        year: year,
-        isbn: isbn,
-        available: available
-    };
-
-    const newBook = createBookService(bookData);
-
-    res.status(201).json({
-        book: newBook
-    });
 }
 
 // ОНОВИТИ КНИГУ
-export function replaceBook(req: Request, res: Response) {
-    const id = String(req.params.id);
-    const { title, author, year, isbn, available } = req.body;
+export async function replaceBook(req: Request, res: Response) {
+    try {
+        const id = String(req.params.id);
+        const { title, author, year, isbn, available } = req.body;
 
-    const bookData = {
-        title: title,
-        author: author,
-        year: year,
-        isbn: isbn,
-        available: available
+        const bookData = {
+            title: title,
+            author: author,
+            year: year,
+            isbn: isbn,
+            available: available
+        }
+
+        const replaceBook = await replaceBookService(id, bookData);
+
+        res.status(200).json({
+            book: replaceBook
+        })
     }
-
-    const replaceBook = replaceBookService(id, bookData);
-
-    res.status(200).json({
-        book: replaceBook
-    })
+    catch (error) {
+        if (error instanceof Error && error.message === "Book not found") {
+            return res.status(404).json({
+                error: error.message
+            })
+        }
+        return res.status(500).json({
+            error: "Internal server error"
+        })
+    }
 }
 
 // ВИДАЛИТИ КНИГУ 
-export function deleteBook(req: Request, res: Response){
-    const id = String(req.params.id);
+export async function deleteBook(req: Request, res: Response) {
+    try {
+        const id = String(req.params.id);
 
-    const deletedBook = deleteBookService(id);
+        await deleteBookService(id);
 
-    res.status(204).json({
-        book: deletedBook
-    });
+        res.status(204).end();
+    }
+    catch (error) {
+        if (error instanceof Error && error.message === "Book not found") {
+            return res.status(404).json({
+                error: error.message
+            })
+        }
+        return res.status(500).json({
+            error: "Internal server error"
+        })
+    }
 }

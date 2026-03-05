@@ -1,56 +1,96 @@
 import { randomUUID } from "crypto";
 import { CreateLoanDto } from "../schemas/loan.schema";
-import { LOANS } from "../storage/loans";
-import { Loan, LoanStatus } from "../types/loan";
 import { setBookAvailability } from "./bookService";
+import prisma from "../lib/prisma";
+import { LoanStatus } from "../generated/prisma/enums";
+import { RequestWithUser } from "../middleware/auth.middleware";
 
-// ПЕРЕГЛЯНУТИ ВСІ ПОЗИКИ
-export function getLoans() {
-    return LOANS;
+
+// ПЕРЕГЛЯНУТИ ВСІ ПОЗИКИ (ПОЗИКИ ТІЛЬКИ КОРИСТУВАЧА)
+export async function getLoans(id: string) {
+    const loans = await prisma.loan.findMany({
+        where: {
+            userId: id
+        }
+    });
+    return loans;
 }
 
-// ОТРИМАТИ КНИГУ ЗА ID
-export function getLoanById(id: string) {
-    return LOANS.find(loan => loan.id === id);
+// ПЕРЕГЛЯНУТИ ПОЗИКИ ВСІХ КОРИСТУВАЧІВ (АДМІН)
+export async function getAllLoans() {
+    const loans = await prisma.loan.findMany();
+    return loans;
+}
+
+// ОТРИМАТИ ПОЗИКУ ЗА ID
+export async function getLoanById(id: string) {
+    const loan = await prisma.loan.findUnique({
+        where: {
+            id: id
+        }
+    })
+
+    return loan;
 }
 
 // ВИДАТИ КНИГУ
-export function giveLoanToUser(createLoanDto: CreateLoanDto) {
-    const newLoan: Loan = {
-        id: randomUUID(),
-        userId: createLoanDto.userId,
+export async function giveLoanToUser(userId: string, createLoanDto: CreateLoanDto) {
+    
+
+    const newLoan = {
+        userId: userId,
         bookId: createLoanDto.bookId,
         loanDate: new Date(),
         returnDate: null,
         status: LoanStatus.ACTIVE,
     }
 
-    LOANS.push(newLoan);
-    return newLoan;
+    const loanDB = await prisma.loan.create({
+        data: newLoan
+    });
+
+    return loanDB;
 }
 
 // ПОВЕРНУТИ КНИГУ
-export function returnLoan(loanId: string) {
-    const existingLoan = getLoanById(loanId);
+export async function returnLoan(userId: string, loanId: string) {
+    const existingLoan = await getLoanById(loanId);
     if (!existingLoan) {
         return null;
     }
 
+    if(existingLoan.userId !== userId){
+        throw new Error("You don't have a loan for this book")
+    }
+
     // ЗАПОВНЕННЯ RETURNDATE
-    existingLoan.returnDate = new Date();
-
     // ЗМІНА СТАТУСУ ПОЗИКИ
-    existingLoan.status = LoanStatus.RETURNED;
-    
-    // ВСТАНОВЛЕННЯ СТАТУСУ ДОСТУПНОСТІ КНИГИ
-    setBookAvailability(existingLoan.bookId, true);
+    const existingLoanDB = await prisma.loan.update({
+        where: {
+            id: loanId
+        },
+        data: {
+            returnDate: new Date(),
+            status: LoanStatus.RETURNED
+        }
+    })
 
-    return existingLoan;
+    // ВСТАНОВЛЕННЯ СТАТУСУ ДОСТУПНОСТІ КНИГИ
+    await setBookAvailability(existingLoanDB.bookId, true);
+
+    return existingLoanDB;
 }
 
 // ПЕРЕВІРКА НА ТЕ ЧИ ІСНУЄ У КНИГИ ПОЗИКА
-export function checkIsLoanActive(bookId: string) {
-    const isActiveLoanExists = LOANS.some(l => l.bookId === bookId && l.status === LoanStatus.ACTIVE);
-    
+export async function checkIsLoanActive(bookId: string) {
+    const loan = await prisma.loan.findFirst({
+        where: {
+            bookId: bookId,
+            status: LoanStatus.ACTIVE
+        }
+    })
+
+    const isActiveLoanExists = loan !== null;
+
     return isActiveLoanExists;
 }

@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum LoanStatus {
+  ACTIVE
+  RETURNED
+}
+
+enum RoleStatus {
+  USER
+  ADMIN
+}
+
+// КНИГА
+model Book {
+  id String @id @default(uuid())
+  title String
+  author String
+  year Int
+  isbn String @unique
+  available Boolean
+}
+
+// ПОЗИКА
+model Loan {
+  id String @id @default(uuid())
+  userId String
+  bookId String
+  loanDate DateTime @default(now())
+  returnDate DateTime?
+  status LoanStatus
+}
+
+model User {
+  id String @id @default(uuid())
+  name String
+  email String @unique
+  passwordHash String
+  role RoleStatus
+}

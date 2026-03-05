@@ -11,3 +11,5 @@ pnpm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+
+/src/generated/prisma

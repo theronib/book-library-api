@@ -1,22 +1,26 @@
-import { randomUUID } from "crypto";
 import { CreateBookDto, ReplaceBookDto } from "../schemas/book.schema";
-import { BOOKS } from "../storage/books";
-import { Book } from "../types/book";
+import prisma from "../lib/prisma";
 
 // ОТРИМАТИ СПИСОК КНИГ
-export function getBooks() {
-    return BOOKS;
+export async function getBooks() {
+    const books = await prisma.book.findMany();
+    return books;
 }
 
 // ОТРИМАТИ КНИГУ ЗА ID
-export function getBookById(id: string) {
-    return BOOKS.find(book => book.id === id);
+export async function getBookById(id: string) {
+    const book = await prisma.book.findUnique({
+        where: {
+            id: id
+        }
+    })
+
+    return book;
 }
 
 // СТВОРИТИ КНИГУ
-export function createBook(book: CreateBookDto) {
-    const newBook: Book = {
-        id: randomUUID(),
+export async function createBook(book: CreateBookDto) {
+    const newBook = {
         title: book.title,
         author: book.author,
         year: book.year,
@@ -24,55 +28,82 @@ export function createBook(book: CreateBookDto) {
         available: book.available
     }
 
-    BOOKS.push(newBook);
-    return newBook;
+    const bookDB = await prisma.book.create({
+        data: newBook
+    });
+    console.log(bookDB)
+
+    return bookDB;
 }
 
 // ОНОВИТИ КНИГУ
-export function replaceBook(id: string, book: ReplaceBookDto) {
-    const existingBook = getBookById(id);
+export async function replaceBook(id: string, book: ReplaceBookDto) {
+    const existingBook = await getBookById(id);
     if (!existingBook) {
-        return null;
+        throw new Error("Book not found")
     }
 
-    existingBook.title = book.title ?? existingBook.title;
-    existingBook.author = book.author ?? existingBook.author;
-    existingBook.year = book.year ?? existingBook.year;
-    existingBook.isbn = book.isbn ?? existingBook.isbn;
-    existingBook.available = book.available ?? existingBook.available;
+    const replacedBook = {
+        title: book.title,
+        author: book.author,
+        year: book.year,
+        isbn: book.isbn,
+        available: book.available
+    }
 
-    return existingBook;
+    const replacedBookDb = await prisma.book.update({
+        where: {
+            id: existingBook.id
+        },
+        data: replacedBook
+    });
+
+    return replacedBookDb;
 }
 
 // ВИДАЛИТИ КНИГУ
-export function deleteBook(id: string) {
-    const existingBook = getBookById(id);
-    const existingBookID = BOOKS.findIndex(b => b.id === id);
+export async function deleteBook(id: string) {
+    const existingBook = await getBookById(id);
     if (!existingBook) {
-        return null;
+        throw new Error("Book not found")
     }
 
-    BOOKS.splice(existingBookID, 1);
-    return existingBook;
+    await prisma.book.delete({
+        where: {
+            id: existingBook.id
+        }
+    });
 }
 
 // ПЕРЕВІРКА НА ТЕ ЧИ ДОСТУПНА КНИГА
-export function checkIsBookAvailable(id: string) {
-    const existingBook = getBookById(id);
-    if (!existingBook) {
-        return false;
-    }
+export async function checkIsBookAvailable(id: string) {
+    const book = await prisma.book.findFirst({
+        where: {
+            id: id,
+            available: true
+        }
+    })
 
-    return existingBook.available;
+    const isBookAvailable = book !== null;
+
+    return isBookAvailable;
 }
 
 // ЗМІНА СТАТУСУ ДОСТУПНОСТІ КНИГИ
-export function setBookAvailability(id: string, availability: boolean) {
-    const existingBook = getBookById(id);
+export async function setBookAvailability(id: string, availability: boolean) {
+    const existingBook = await getBookById(id);
     if (!existingBook) {
-        return null;
+        throw new Error("Book not found");
     }
 
-    existingBook.available = availability;
-    return existingBook;
+    const updatedBookAvaiability = await prisma.book.update({
+        where: {
+            id: existingBook.id
+        },
+        data: {
+            available: availability
+        }
+    });
+
+    return updatedBookAvaiability
 }
