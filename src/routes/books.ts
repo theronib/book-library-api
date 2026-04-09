@@ -10,8 +10,8 @@ const router = express.Router();
 
 router.get("/", bookController.getBooks);
 router.get("/:id", bookController.getBookById);
-router.post("/", validate(CreateBookSchema), auth, role(["ADMIN"]), bookController.createBook);
-router.put("/:id", validate(ReplaceBookSchema), auth, role(["ADMIN"]), bookController.replaceBook);
+router.post("/", auth, role(["ADMIN"]), validate(CreateBookSchema), bookController.createBook);
+router.put("/:id", auth, role(["ADMIN"]), validate(ReplaceBookSchema), bookController.replaceBook);
 router.delete("/:id", auth, role(["ADMIN"]), bookController.deleteBook);
 
 export default router;
