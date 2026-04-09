@@ -1,3 +1,5 @@
+import { email } from "zod";
+
 function getEnvironmentVariable(name: string, defaultValue?: string){
     const value = process.env[name] ?? defaultValue;
 
@@ -10,7 +12,12 @@ function getEnvironmentVariable(name: string, defaultValue?: string){
 
 const CONFIG = {
     jwtSecret: getEnvironmentVariable("JWT_SECRET"),
-    jwtExpiresIn: getEnvironmentVariable("JWT_EXPIRES_IN", "7d")
+    jwtExpiresIn: getEnvironmentVariable("JWT_EXPIRES_IN", "7d"),
+    smtpHost: getEnvironmentVariable("SMTP_HOST"),
+    smtpPort: Number.parseInt(getEnvironmentVariable("SMTP_PORT"), 10),
+    smtpAuthUser: getEnvironmentVariable("SMTP_AUTH_USER"),
+    smtpAuthPass: getEnvironmentVariable("SMTP_AUTH_PASS"),
+    senderEmail: getEnvironmentVariable("SENDER_EMAIL")
 }
 
 export default CONFIG;

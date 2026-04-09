@@ -49,4 +49,5 @@ model User {
   email String @unique
   passwordHash String
   role RoleStatus
+  avatar String?
 }
